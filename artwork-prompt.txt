@@ -1,0 +1,5 @@
+Tool: built-in image_gen.imagegen
+Use case: photorealistic-natural
+Output: dist/assets/monaco-qualifying.webp (original generated artwork)
+
+Use case: photorealistic-natural. Asset type: full-bleed landscape hero background for a Monaco Formula 1 qualifying browser game. Primary request: ultra realistic editorial motorsport action photography of modern open-wheel Formula 1 racing cars negotiating the Monaco Fairmont hairpin, a crimson red car large in the lower right foreground and a deep navy blue car following further uphill. Monte Carlo cream apartment balconies, Armco barriers, red and white kerbs, dark tarmac with subtle rubber buildup, trackside fencing. Wide cinematic composition at 1536x1024 with the cars in right two thirds and darker track / blurred architecture in left third where webpage text will overlay. Bright Mediterranean late afternoon sunlight, authentic carbon fiber, slick tyres, directional motion blur in wheels but sharp car body, long-lens sports photography. Grounded realistic proportions. No written text, no watermarks, no UI. It is original generated promotional artwork, not a reproduction of an existing photograph.

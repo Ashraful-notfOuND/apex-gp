@@ -1,0 +1,10 @@
+Tool: built-in image_gen.imagegen
+Outputs: dist/assets/monaco-facade.webp; dist/assets/racing-materials.webp
+Assets prepared at power-of-two dimensions for WebGL mipmapping and repeat sampling.
+
+FACADE
+Use case: photorealistic-natural. Asset type: seamless diffuse/albedo texture for a real-time 3D Monaco street-racing environment, a single square 1024 by 1024 texture. Straight-on orthographic architectural photography of a classic Monte Carlo cream limestone apartment facade, tightly cropped, three floors high and four evenly spaced window bays across, with pale limestone cornices, dark green French shutters, reflective dark glass and slim wrought-iron Juliet balcony railings. Completely flat front-facing view, no perspective, no sky, no ground, no cars or people, no roof edge. Fill the entire square with repeating facade. Edges must tile seamlessly in both directions. Soft neutral overcast light, minimal baked shadow, real weathering and fine material texture. Restrained cream, warm grey and dark green palette. No text or watermarks. This is a material texture, not a scene render.
+
+MATERIALS
+Use case: photorealistic-natural. Asset type: precisely arranged square 2048 by 2048 material texture atlas for a realistic racing game. Exactly four equally sized square quadrants in a 2 by 2 grid, no borders, labels or margins. Top left: neutral dark grey dry racing asphalt, fine crushed aggregate, subtle rubber wear and pores, no road markings or dramatic cracks. Top right: light warm grey weathered poured concrete, fine pores and faint dirt, no large cracks. Bottom left: warm ivory limestone stucco with slight weathering, no windows. Bottom right: very dark charcoal 2 by 2 twill carbon fibre composite, visible realistic fine diagonal weave under resin, flat neutral lighting with no big bright reflections. Each quadrant is a seamless tiling surface viewed exactly orthographically, evenly lit, physically convincing diffuse/albedo material photography. Avoid text, watermarks, heavy shadows, perspective or objects. Texture atlas only.
+

@@ -1,0 +1,28 @@
+# Paid Node service plus a private persistent disk. Review Render's cost before
+# creating the Blueprint. This file assumes apex-gp is the Git repository root.
+services:
+  - type: web
+    name: apex-gp-monaco
+    runtime: node
+    region: singapore
+    plan: 1c-2g
+    numInstances: 1
+    buildCommand: npm run check && EVENT_ID=monaco-2026 npm test
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeployTrigger: 'off'
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /var/data/apex-gp
+      - key: EVENT_ID
+        value: monaco-2026
+      - key: EVENT_SEED
+        value: '2026'
+    disk:
+      name: apex-gp-data
+      mountPath: /var/data
+      sizeGB: 1
