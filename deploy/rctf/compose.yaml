@@ -1,0 +1,43 @@
+services:
+  coordinator:
+    build:
+      context: ../..
+    image: ${APEX_IMAGE:?Set APEX_IMAGE in .env}
+    command: [node, ctf-coordinator.mjs]
+    env_file: ../../.env
+    ports:
+      - 127.0.0.1:8081:8081
+    volumes:
+      - apex_ctf_data:/var/lib/apex-gp
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 2g
+    cpus: 2.0
+    pids_limit: 128
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:8081/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+  caddy:
+    image: caddy:2-alpine
+    profiles: [https]
+    environment:
+      COORDINATOR_HOST: ${COORDINATOR_HOST:?Set COORDINATOR_HOST in .env}
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    depends_on:
+      coordinator:
+        condition: service_healthy
+volumes:
+  apex_ctf_data:
+  caddy_data:
+  caddy_config:

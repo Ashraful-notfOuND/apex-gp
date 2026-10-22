@@ -4,6 +4,8 @@ A desktop browser racing challenge: choose a car, choose tyres and Go. Eleven co
 
 ## Run
 
+For an **rCTF challenge with per-team HTTP instances, unlimited practice, three qualifying rounds and automatic lap-based CTF points**, use the [rCTF deployment guide](deploy/rctf/README.md). It includes the shared persistent coordinator, rCTF sign-in, Docker instance configuration and dynamic-score publisher. The static preview below does not supply event scoring.
+
 Requires a keyboard/WebGL browser. Use Node.js 24 for deployment (`.node-version` pins the major version); the code also runs on Node.js 20+. There are no npm dependencies.
 
 ```sh
@@ -98,9 +100,72 @@ Tests cover rejected legacy fence chords at the hairpin, independent clearance c
 
 During this update, all six shaders were compiled and fifteen actual 3D frames rendered with an offscreen EGL/GLES context. Visual inspection checked the redesigned car from the front, both sides, rear and top, its cockpit and open DRS, onboard visibility, sponsor mapping, shadow filtering, tunnel, waterfront and overhead views of the repaired hairpin/chicane boundaries. Reproduce the previews with `node scripts/capture-model.mjs --track` followed by `python3 scripts/render-capture.py`; native development requirements are listed in `output/previews/README.md`. A complete browser/human-driven lap still needs testing on your host: this environment blocks local listening sockets and browser startup. Offscreen rendering does not validate browser layout or human driving feel.
 
-## Hosting on Render
+## Free static hosting on Render
 
-Deploy the complete Node application. The browser draws the game; the Node server serves the assets, verifies ranked input and stores event records. The supplied `render.yaml` creates one paid Node web service in Singapore with a 1 GB persistent disk, Node 24, a health check and manual deployments. Review the displayed price before creating it. Render's free web service cannot attach the persistent disk needed by this file-based event store. See [Render web services](https://render.com/docs/web-services), [persistent disks](https://render.com/docs/disks) and [Blueprints](https://render.com/docs/infrastructure-as-code).
+The current deployment target is a free **Static Site**. It includes all eleven cars, tyre choices, manual driving, DRS, graphics/audio, three guest qualifying rounds with the best time saved on that browser, and unlimited practice. It hides ranked event selection, token entry, shared timing and the ranked briefing, and does not request any `/api` endpoints. Browser-local records are unverified and do not produce a shared CTF classification.
+
+The default `render.yaml` now describes only this static site. The paid Node service configuration is preserved separately in `render-ranked.yaml`. No server, disk, `HOST`, `PORT`, `DATA_DIR` or player-token provisioning is required for the static preview. Render static sites are free to deploy within their included usage limits. [Render Static Sites](https://render.com/docs/static-sites).
+
+### 1. Build and check the preview
+
+```sh
+cd "/home/nafim/Desktop/DUCTF 2026/GP/apex-gp"
+npm run build:static
+npm run check
+npm test
+```
+
+`build:static` copies only public game files from `dist/` into `static-dist/` and marks that copy as a static preview. The server source stays in server mode. Publish **`static-dist`**, rather than raw `dist`, so visitors cannot select the unavailable ranked service. The generated directory is ignored by Git and rebuilt by Render.
+
+### 2. Push the changes to the existing GitHub repository
+
+If the repository is already connected to GitHub, run:
+
+```sh
+git add .gitignore package.json render.yaml render-ranked.yaml README.md
+git add dist/game.js dist/index.html scripts/build-static.mjs tests/static-build.test.mjs tests/ui.test.mjs
+git diff --cached --stat
+git commit -m "Prepare free Render static preview"
+git push
+```
+
+Review staged files before committing; do not force-add `data/` or access tokens. If you have not created/pushed the GitHub repository yet, follow the repository setup commands in the ranked guide below, adding both `render.yaml` and `render-ranked.yaml` to that commit.
+
+### 3. Create a Static Site in Render
+
+Cancel the pending paid Blueprint setup, then choose **New → Static Site** in [Render](https://dashboard.render.com/). Connect the GitHub repository and use:
+
+| Setting | Value |
+| --- | --- |
+| Name | `apex-gp-preview` or another available name |
+| Branch | `main` |
+| Root Directory | Blank if `package.json` is at the repository root |
+| Build Command | `npm run build:static` |
+| Publish Directory | `static-dist` |
+| Environment variables | None required; optional `SKIP_INSTALL_DEPS=true` skips unnecessary dependency installation |
+
+If the GitHub repository instead contains a parent `GP` directory with `apex-gp` inside it, set Root Directory to `apex-gp`; keep the build command and Publish Directory as shown. Do not choose Web Service or attach a disk.
+
+Click **Create Static Site**, wait for Live, and open the exact HTTPS URL Render supplies. It will resemble `https://apex-gp-preview-xxxx.onrender.com`. You can also use a Blueprint with the default `render.yaml`; it contains no paid service or disk. Manual Static Site creation is the direct route from the dashboard.
+
+### 4. Verify the preview
+
+In a desktop browser, check the car/tyre selection, guest qualifying and practice under Driver settings. Ranked event mode, access tokens and the Timing button should be absent. Reopening the same site/browser retains used guest rounds and the best time. A different browser or clearing site data gets a separate guest record. Practice does not use a guest round.
+
+Optional terminal checks, replacing the example hostname:
+
+```sh
+curl -I https://YOUR-SITE.onrender.com/
+curl -fsS https://YOUR-SITE.onrender.com/ | rg 'apex-hosting.*static'
+```
+
+HTTP 200 is expected for the page. There is no `/api/health` or shared leaderboard on a Static Site; those checks belong to the optional Node server below. Custom domains and HTTPS are supported by Render; the supplied URL is enough to share the preview.
+
+For later changes, push to the connected branch and let Render rebuild the static site (automatic deployments are enabled in the static Blueprint). The preview has no server records to migrate. Choose Performance graphics if a player's browser needs a lower rendering resolution.
+
+## Ranked server hosting on Render
+
+This is the optional paid path for a future ranked event. For the current free preview, use the static instructions above. Deploy the complete Node application. The browser draws the game; the Node server serves the assets, verifies ranked input and stores event records. The supplied `render-ranked.yaml` creates one paid Node web service in Singapore with a 1 GB persistent disk, Node 24, a health check and manual deployments. Review the displayed price before creating it. Render's free web service cannot attach the persistent disk needed by this file-based event store. See [Render web services](https://render.com/docs/web-services), [persistent disks](https://render.com/docs/disks) and [Blueprints](https://render.com/docs/infrastructure-as-code).
 
 ### 1. Check the project locally
 
@@ -121,7 +186,7 @@ On GitHub, create a new private repository named `apex-gp`. Leave the initializa
 
 ```sh
 git init
-git add .gitignore .node-version render.yaml package.json server.mjs README.md LICENSES.md
+git add .gitignore .node-version render-ranked.yaml package.json server.mjs README.md LICENSES.md
 git add dist scripts tests output/models artwork-prompt.txt material-prompts.txt facade-v3-prompt.txt
 git status --short
 git diff --cached --stat
@@ -133,14 +198,14 @@ git push -u origin main
 
 Review the staged files before committing. Do not force-add `data/`, access tokens or other credentials. GitHub authentication may be required when pushing. If `origin` already exists, inspect it with `git remote -v` and use `git remote set-url origin ...` only if you intend to change its destination. If Git asks for your identity, set your actual name/email with repository-local `git config user.name` and `git config user.email`, then retry the commit.
 
-The repository root must contain `package.json`, `server.mjs`, `render.yaml`, `dist/`, `scripts/`, `tests/` and `output/models/`. The model export is included because model tests read it. With this layout, Render's Root Directory is **blank**, not `apex-gp`. If you instead upload the parent `GP` directory with an `apex-gp` subfolder, the Blueprint path must be `apex-gp/render.yaml` and its service must set `rootDir: apex-gp`.
+The repository root must contain `package.json`, `server.mjs`, `render-ranked.yaml`, `dist/`, `scripts/`, `tests/` and `output/models/`. The model export is included because model tests read it. With this layout, Render's Root Directory is **blank**, not `apex-gp`. If you instead upload the parent `GP` directory with an `apex-gp` subfolder, the Blueprint path must be `apex-gp/render-ranked.yaml` and its service must set `rootDir: apex-gp`.
 
 ### 3. Create the Render service
 
 1. Sign in to [Render](https://dashboard.render.com/) and connect the GitHub account containing the repository.
 2. Choose **New → Blueprint** and select the private repository, granting Render access if requested.
-3. Select branch `main`; the Blueprint file path is `render.yaml`.
-4. Review the proposed service and disk. The file selects the paid `1c-2g` compute plan (1 CPU, 2 GB RAM), one instance, Singapore and a 1 GB disk. Choose another supported region in `render.yaml` before the first creation if your players are elsewhere. This is a starting configuration, not a measured concurrency guarantee.
+3. Select branch `main`; the Blueprint file path is `render-ranked.yaml`.
+4. Review the proposed service and disk. The file selects the paid `1c-2g` compute plan (1 CPU, 2 GB RAM), one instance, Singapore and a 1 GB disk. Choose another supported region in `render-ranked.yaml` before the first creation if your players are elsewhere. This is a starting configuration, not a measured concurrency guarantee.
 5. Apply/create the Blueprint. The build runs the JavaScript checks and Node tests, then starts the server. Wait until the service is Live.
 6. Open the exact HTTPS address shown in the service dashboard, usually shaped like `https://apex-gp-monaco-xxxx.onrender.com`.
 

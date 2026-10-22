@@ -1,0 +1,62 @@
+# Paste this document into rCTF's Kubernetes "Instancer config" field.
+# Set the separate exposed endpoint to: https / apex-gp / game / 8080.
+# Replace the image with a published tag and fill in the coordinator URL/key.
+pods:
+  - name: game
+    ports:
+      - port: 8080
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: game
+          image: ghcr.io/ashraful-notfound/apex-gp:ctf-v1
+          imagePullPolicy: Always
+          workingDir: /app
+          command:
+            - node
+            - ctf-instance.mjs
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: HOST
+              value: "0.0.0.0"
+            - name: PORT
+              value: "8080"
+            - name: COORDINATOR_URL
+              value: "https://timing.example.com"
+            - name: COORDINATOR_PUBLIC_URL
+              value: "https://timing.example.com"
+            - name: APEX_GATEWAY_KEY
+              value: "REPLACE_WITH_COORDINATOR_APEX_GATEWAY_KEY"
+            - name: RCTF_EXPOSED_HOSTNAMES
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.annotations['rctf.osec.io/exposed-hostnames']
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 5
+    egress: true

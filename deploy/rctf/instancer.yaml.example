@@ -1,0 +1,8 @@
+# Copy into rCTF's rctf.d/ directory after configuring its Docker instancer.
+instancers:
+  docker:
+    name: instancers/docker
+    options:
+      apiUrl: http://tiny-instancer:1337
+      authToken: REPLACE_ME_WITH_INSTANCER_AUTH_TOKEN
+defaultInstancer: docker

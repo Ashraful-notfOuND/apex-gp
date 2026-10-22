@@ -1,5 +1,11 @@
 data/
 node_modules/
+static-dist/
 .openai/
 *.log
 __pycache__/
+.env
+.env.*
+!.env.example
+deploy/rctf/challenge.generated.json
+apex-gp-data-*.tar.gz

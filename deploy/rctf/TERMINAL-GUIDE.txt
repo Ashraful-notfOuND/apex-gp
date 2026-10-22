@@ -1,0 +1,482 @@
+APEX GP: CREATE AND RUN THE rCTF CHALLENGE
+
+Read this guide in order. It shows commands to run; printing this file does not
+run them. Replace example domains, server names and dates with your own values.
+Use your regular terminal for internet access and Docker.
+
+WHERE EACH STEP HAPPENS
+
+  LAPTOP:       This project and your GitHub repository.
+  rCTF HOST:    The existing CTF platform and its configuration.
+  INSTANCER:    The Docker host that creates temporary team containers.
+  COORDINATOR:  A permanent service that stores attempts and verifies laps.
+
+The coordinator and instancer can be on separate machines. If you use one
+machine, its existing reverse proxy must route the appropriate hostnames;
+two independent services cannot both bind the same public port 443.
+
+  Team browser -> team gateway (HTTP 8080 inside Docker)
+               -> permanent coordinator -> rCTF scoreboard
+
+The public game links use HTTPS. Three attempts belong to the rCTF team UUID,
+so recreating a container or changing browsers does not restore attempts.
+
+
+1. CHECK THE PLATFORM FIRST [rCTF ADMIN]
+
+Ask the platform administrator to confirm that the installed rCTF supports:
+
+  - External apps under Admin / Settings.
+  - Per-team Docker instances and RCTF_EXPOSED_HOSTNAMES injection.
+  - Challenge scoring kind "dynamic" with an external signed score feed.
+
+This implementation targets the current otter-sec/rctf V2 APIs. Older rCTF
+versions may need an upgrade or an integration adapted to their own APIs.
+
+The ordinary setting that decreases a challenge's value as more teams solve
+it does not implement this racing format. We need different points for each
+team, recalculated from all teams' best laps.
+
+Platform reference: [rCTF scoring](https://rctf.osec.io/admin/scoring/).
+
+Do not create a normal flag-based challenge and expect it to rank lap times.
+The setup below creates a dynamic challenge without a flag-submission box.
+
+
+2. PUT THE CURRENT IMPLEMENTATION ON GITHUB [LAPTOP]
+
+The CTF implementation currently includes local changes. A server cloning
+the repository needs these files, including the new lib/ and deploy/ files.
+
+  cd "/home/nafim/Desktop/DUCTF 2026/GP/apex-gp"
+  git status --short
+
+Review and stage the project files:
+
+  git add .gitignore .dockerignore Dockerfile README.md package.json
+  git add server.mjs ctf-coordinator.mjs ctf-instance.mjs lib scripts tests
+  git add .github dist deploy/rctf render.yaml render-ranked.yaml
+  git diff --cached --stat
+  git diff --cached --check
+  git commit -m "Add rCTF racing challenge deployment"
+  git push -u origin main
+
+The configured repository is:
+  https://github.com/Ashraful-notfOuND/apex-gp
+
+Keep .env, event data, generated challenge credentials and backups private.
+The project's ignore rules cover those files; do not force-add them.
+
+
+3. ARRANGE THE SERVER ADDRESSES [DNS / SERVER ADMIN]
+
+Use three addresses, for example:
+
+  https://ctf.example.com        Existing rCTF platform
+  https://timing.example.com     Permanent coordinator
+  *.instances.example.com       Temporary team instance hostnames
+
+Create DNS records pointing timing.example.com to the coordinator server and
+the instance wildcard to the instancer server. Use the actual server addresses.
+
+The coordinator's optional Caddy service can manage its HTTPS certificate.
+The rCTF instancer needs its own wildcard certificate and routing setup.
+
+The coordinator data must remain available when temporary instances stop.
+Do not put its persistent volume inside a team's challenge container.
+
+
+4. CHECK OR SET UP THE INSTANCER [rCTF HOST + INSTANCER]
+
+If your event already creates HTTP instances successfully, keep that working
+instancer and note its configured name. The example name here is "docker".
+
+If there is no instancer yet, use the bundled Docker-instancer stack in the
+supported rCTF checkout. On that checkout, its deployment directory is:
+
+  deploy/docker-instancer/
+
+Configure its .env using that checkout's supplied .env.example. Required
+settings include its own AUTH_TOKEN, Redis credentials and:
+
+  INSTANCES_HOST=instances.example.com
+
+Install the wildcard TLS certificate in the paths required by that stack.
+Then, from the rCTF checkout root, start the instancer:
+
+  docker compose -f deploy/docker-instancer/compose.yml up -d
+
+Configure rCTF's rctf.d/instancer.yaml with the following structure:
+
+  instancers:
+    docker:
+      name: instancers/docker
+      options:
+        apiUrl: http://tiny-instancer:1337
+        authToken: YOUR_INSTANCER_AUTH_TOKEN
+  defaultInstancer: docker
+
+That apiUrl assumes rCTF can reach tiny-instancer on its Docker network.
+On separate hosts, use the instancer's reachable private API address instead.
+Follow the provider's host binding and firewall instructions. Reload/restart
+rCTF with the event's existing deployment procedure after changing its config.
+
+A template is included in this project:
+  deploy/rctf/instancer.yaml.example
+
+Provider reference: [Docker instancer](https://rctf.osec.io/integrations/instancer/docker/).
+
+
+5. GET THE PROJECT ON THE COORDINATOR SERVER [COORDINATOR]
+
+Log into your coordinator server. The following assumes Docker, Docker
+Compose and Node.js 24 are already installed there:
+
+  docker --version
+  docker compose version
+  node --version
+
+Clone the repository if this server does not have it:
+
+  git clone https://github.com/Ashraful-notfOuND/apex-gp.git
+  cd apex-gp
+
+For an existing checkout, enter that checkout and pull your reviewed changes:
+
+  git pull --ff-only
+
+Confirm that the deployment files arrived:
+
+  ls Dockerfile ctf-coordinator.mjs ctf-instance.mjs
+  ls deploy/rctf/compose.yaml scripts/rctf-challenge.mjs
+
+Run the project checks:
+
+  npm run check
+  npm test
+
+There are no npm dependencies to install. Do not use the free static Render
+preview as the ranked backend: ranked scoring needs this persistent service.
+
+
+6. CREATE THE PRIVATE CONFIGURATION [COORDINATOR]
+
+For the first setup, when no .env already exists:
+
+  cp deploy/rctf/.env.example .env
+  chmod 600 .env
+  nano .env
+
+In nano: Ctrl+O, Enter saves; Ctrl+X exits. If .env already exists, edit it
+instead of replacing it with the example.
+
+Fill in your real values:
+
+  RCTF_URL=https://ctf.example.com
+  RCTF_CHALLENGE_ID=apex-gp-staging
+  RCTF_INSTANCER=docker
+
+  COORDINATOR_PUBLIC_URL=https://timing.example.com
+  COORDINATOR_HOST=timing.example.com
+  INSTANCE_DOMAIN=instances.example.com
+  INSTANCE_PREFIX=apex-gp-
+
+  APEX_IMAGE=ghcr.io/ashraful-notfound/apex-gp:ctf-v1
+  EVENT_ID=ductf-2026-monaco-staging
+  EVENT_START=YOUR_START_TIME_WITH_TIMEZONE
+  EVENT_END=YOUR_END_TIME_WITH_TIMEZONE
+
+  EVENT_SEED=2026
+  MAX_SESSIONS=24
+  DATA_DIR=/var/lib/apex-gp
+  HOST=0.0.0.0
+  PORT=8081
+
+Start with a staging challenge/event. Give staging an active test window.
+The rCTF platform must also allow the test teams to start instances at that
+time; the game's window cannot override the platform's own event gates.
+
+Use ISO timestamps such as 2026-11-01T06:00:00Z, replacing that date/time.
+To see the current UTC time:
+
+  date -u '+%Y-%m-%dT%H:%M:%SZ'
+
+Generate three DIFFERENT secrets:
+
+  openssl rand -hex 32
+  openssl rand -hex 32
+  openssl rand -hex 32
+
+Put one generated value into each setting:
+
+  RCTF_SCORING_SECRET=FIRST_VALUE
+  APEX_COOKIE_SECRET=SECOND_VALUE
+  APEX_GATEWAY_KEY=THIRD_VALUE
+
+Leave no REPLACE_ME values when you finish the configuration. The instancer's
+AUTH_TOKEN is a separate secret; it is not one of these three values.
+
+
+7. REGISTER GAME SIGN-IN [rCTF ADMIN, THEN COORDINATOR]
+
+On your rCTF website, sign in as an administrator and open:
+
+  Admin -> Settings -> External apps -> Add
+
+Use:
+
+  Name:         APEX GP
+  Redirect URI: https://timing.example.com/auth/rctf/callback
+
+Replace the domain with your coordinator domain. The complete redirect URI
+must match exactly. Copy the returned client UUID and secret into .env:
+
+  RCTF_CLIENT_ID=YOUR_RETURNED_CLIENT_UUID
+  RCTF_CLIENT_SECRET=YOUR_RETURNED_CLIENT_SECRET
+
+If the mouse button is unavailable, browser Tab/Shift+Tab and Enter can
+navigate the form. You can also ask the platform admin to register the app
+and supply its credentials privately.
+
+The game checks the signed-in team's profile and running instance, then
+discards the rCTF account token. Participants do not need organizer-issued
+game tokens. Reference: [External apps](https://rctf.osec.io/admin/external-auth/).
+
+
+8. START THE PERMANENT COORDINATOR [COORDINATOR]
+
+From the apex-gp project root, validate the Compose configuration:
+
+  docker compose --env-file .env -f deploy/rctf/compose.yaml config --quiet
+
+On a dedicated host where ports 80 and 443 are available, start the coordinator
+and its Caddy HTTPS proxy:
+
+  docker compose --env-file .env -f deploy/rctf/compose.yaml --profile https up -d --build
+
+If an existing reverse proxy already handles HTTPS on this machine, omit
+"--profile https" and route timing.example.com to 127.0.0.1:8081 yourself.
+Preserve request paths and cookies through that proxy.
+
+Check the services and public health endpoint:
+
+  docker compose --env-file .env -f deploy/rctf/compose.yaml ps
+  curl -fsS https://timing.example.com/healthz
+
+Expected response: JSON containing ok=true and your configured EVENT_ID.
+
+If startup fails, inspect the coordinator logs:
+
+  docker compose --env-file .env -f deploy/rctf/compose.yaml logs --tail 100 coordinator
+
+There must be one coordinator process using its persistent data volume.
+Practice is calculated in browsers; ranked simulations use coordinator CPU.
+The initial limit is 24 simultaneous ranked runs. Load-test your actual host
+before increasing it or promising a higher player capacity.
+
+
+9. PUBLISH THE GAME IMAGE [COORDINATOR / BUILD HOST, THEN INSTANCER]
+
+To build on GitHub's runners instead of your laptop, follow:
+
+  less deploy/rctf/PUBLISH-ON-GITHUB.txt
+
+That route needs no local Docker engine. Publish through Actions before
+starting the coordinator, then pull the image on the server and use
+"up -d --no-build". The build-and-push commands below are the server-build
+alternative.
+
+The Compose build used your APEX_IMAGE tag. Publish that image to GHCR:
+
+  docker login ghcr.io
+  docker push ghcr.io/ashraful-notfound/apex-gp:ctf-v1
+
+Use your selected registry/tag if different. Registry login needs the
+appropriate package permissions; a normal GitHub account password is not
+a registry access token.
+
+On the INSTANCER HOST, confirm it can pull exactly that image:
+
+  docker pull ghcr.io/ashraful-notfound/apex-gp:ctf-v1
+
+For a private image, configure registry authentication for the instancer's
+actual runtime/pull mechanism. A successful pull in your personal shell
+does not by itself prove that its service has the same credentials. Using a
+public image avoids that extra registry-auth setup if public source is fine.
+
+The image contains the application code. Runtime secrets remain in private
+configuration; the Dockerfile does not copy .env into the image.
+
+
+10. GENERATE AND CREATE THE CHALLENGE [COORDINATOR]
+
+Generate the full rCTF admin API payload:
+
+  node --env-file=.env scripts/rctf-challenge.mjs
+
+The generated file is:
+
+  deploy/rctf/challenge.generated.json
+
+Review it privately using an editor:
+
+  nano deploy/rctf/challenge.generated.json
+
+It contains credentials. Do not publish it as a challenge download or commit
+it to Git. These are the important resulting fields:
+
+  Challenge ID:       RCTF_CHALLENGE_ID, initially apex-gp-staging
+  Name:               APEX GP - Monaco Qualifying
+  Category:           misc
+  Scoring kind:       dynamic
+  Scoring transport:  webhook
+  Scoring secret:     your RCTF_SCORING_SECRET
+  Points range:       minimum 200, maximum 1000
+  Flags:              empty
+  Download files:     empty
+  Tiebreak eligible:  false
+  Hidden:             true
+  Instancer:          your configured instancer name
+  Instance lifetime:  3,600,000 milliseconds (one hour)
+  Extendable:         true
+  Container service:  game
+  Container port:     8080
+  Displayed endpoint: HTTPS, labelled APEX GP
+
+The generated description explains the player rules and controls. You do
+not need to upload a fake flag or have teams submit their lap times.
+
+Create the hidden challenge using an rCTF ADMIN BEARER TOKEN with challenge
+read/write permissions. Obtain that token privately through your platform's
+admin authentication workflow. It is not the external-app client secret,
+the webhook secret, an instancer token, or a normal game cookie.
+
+Enter it at a hidden terminal prompt:
+
+  read -r -s -p 'rCTF admin bearer token: ' apex_admin_token
+  export RCTF_ADMIN_TOKEN="$apex_admin_token"
+  node --env-file=.env scripts/rctf-challenge.mjs --upload
+  unset RCTF_ADMIN_TOKEN apex_admin_token
+
+Expected result: a message confirming creation of a HIDDEN challenge.
+
+The uploader refuses to overwrite an existing challenge. If that ID already
+exists, inspect it in Admin / Challenges. Use a different staging ID for a
+new test, or have the platform admin apply the reviewed settings to the
+existing challenge. Do not run a second creation step after successful upload.
+
+You can review the created challenge at your platform's /admin/challs page.
+Reference: [Challenge administration](https://rctf.osec.io/admin/challenges/).
+
+
+11. TEST THE COMPLETE PLAYER FLOW [STAGING PLATFORM / BROWSER]
+
+Use test teams and an active staging window. Keep competition data separate.
+Hidden-challenge access depends on platform permissions; if ordinary test
+teams cannot access it, expose only the staging challenge on your staging
+platform. Do not release the production challenge to work around this.
+
+For Team A:
+
+  a. Open the challenge in rCTF and start its instance.
+  b. Open the APEX GP link shown by rCTF.
+  c. Drive in Practice first. Pause, reset and restart freely.
+  d. Open Driver, choose Sign in with rCTF, approve, and return to the game.
+  e. Choose Event qualifying and Save.
+  f. Start Q1. A round is an out-lap followed by one timed flying lap.
+  g. Complete Q1/Q2/Q3. Only the fastest valid lap should count.
+  h. Confirm that starting a fourth qualifying round is refused.
+  i. Recreate the instance, sign in again, and confirm attempts remain used.
+
+For Team B:
+
+  a. Create its own instance and sign in with its own account.
+  b. Complete a valid ranked lap.
+  c. Compare Timing in the game with the rCTF scoreboard.
+
+Expected scoring examples:
+
+  One finisher:             1000
+  Two distinct finishers:   1000, 200
+  Three distinct finishers: 1000, 600, 200
+  Tied fastest teams:       equal points for the tied times
+  No valid lap:             0
+
+A later improvement can change OTHER teams' points as well. The coordinator
+publishes updated values automatically, normally within two seconds plus
+the platform's leaderboard processing time.
+
+Also test the deadline: late ranked starts/input must fail, the final scores
+must remain fixed, and practice must stay available. Browser focus loss,
+abandoning a round and coordinator interruption consume a started attempt.
+
+Use real keyboard/WebGL browsers for these checks. Existing automated tests
+cover handlers and UI stubs, but cannot replace the real platform/TLS flow.
+
+
+12. CREATE THE CLEAN PRODUCTION CHALLENGE [COORDINATOR + rCTF ADMIN]
+
+After staging works, edit .env for the competition:
+
+  RCTF_CHALLENGE_ID=apex-gp
+  EVENT_ID=ductf-2026-monaco
+  EVENT_START=YOUR_ACTUAL_COMPETITION_START
+  EVENT_END=YOUR_ACTUAL_COMPETITION_END
+
+The production ID must not be the staging event ID. Keep the coordinator's
+public domain and external-app callback unchanged unless you also update
+the app registration. The separate event ID isolates the used staging rounds.
+
+Restart with the production configuration:
+
+  docker compose --env-file .env -f deploy/rctf/compose.yaml up -d coordinator
+  curl -fsS https://timing.example.com/healthz
+
+The health response must now identify the PRODUCTION event.
+
+Generate and upload the new hidden production challenge, repeating step 10.
+If apex-gp already exists, review/update it in the admin editor instead of
+creating a duplicate. Keep its dynamic score secret matched to .env.
+
+On rCTF, review the production challenge and remove its hidden setting at
+the intended release time. Set any platform release schedule to match your
+event plan. From this point, a ranked test uses a real competition attempt.
+
+
+13. DURING THE COMPETITION [ORGANIZER]
+
+Keep these fixed: event ID, simulation version, seed, data volume and secrets.
+All gateways must continue pointing at the same coordinator.
+
+Do not use:
+
+  docker compose down -v
+
+That removes named volumes and can erase the event records. Restarting the
+coordinator preserves stored results but interrupts active qualifying runs,
+so schedule source updates outside those runs.
+
+The coordinator freezes the final classification at its configured deadline.
+It can retry delivering that saved final snapshot after a network outage;
+it does not accept late qualifying results.
+
+The longer guide includes consistent backup commands and troubleshooting:
+
+  less deploy/rctf/README.md
+
+This implementation verifies the simulated physics and ignores client-sent
+lap times. It does not prove human driving. Publish your event's rules about
+automation and organizer review before participants start.
+
+
+WHAT TO DO FIRST
+
+  1. Confirm the rCTF version and existing instancer with your platform admin.
+  2. Choose the coordinator and instance domains.
+  3. Push the current project, then follow the numbered setup above.
+
+To reopen this terminal guide from the project root:
+
+  less deploy/rctf/TERMINAL-GUIDE.txt
+
+Inside less: use arrows/PageDown to read, / to search, and q to exit.

@@ -1,0 +1,83 @@
+BUILD AND PUBLISH ON GITHUB'S RUNNERS
+
+The laptop only pushes source code and triggers a GitHub workflow. Tests,
+Docker builds and registry uploads all run on GitHub. No local Docker engine,
+local game server or personal registry token is required for this workflow.
+
+1. Push the complete project from your normal terminal:
+
+   cd "/home/nafim/Desktop/DUCTF 2026/GP/apex-gp"
+   git status --short
+   git add .github .gitignore .dockerignore Dockerfile README.md package.json
+   git add server.mjs ctf-coordinator.mjs ctf-instance.mjs lib scripts tests
+   git add dist deploy/rctf render.yaml render-ranked.yaml
+   git diff --cached --stat
+   git diff --cached --check
+   git commit -m "Add rCTF deployment and GitHub image publishing"
+   git push -u origin main
+
+   The new Dockerfile and runtime modules must be included, not just the
+   workflow file. Existing secrets/data ignore rules remain in effect.
+
+2. Start the manual workflow from your terminal:
+
+   gh auth status
+   gh workflow run publish-image.yml --ref main -f tag=ctf-v1
+   gh run list --workflow publish-image.yml --limit 5
+
+   If GitHub CLI needs authentication, run gh auth login and sign in as
+   Ashraful-notfOuND first. If pushing a workflow through an OAuth/classic
+   token is refused for a missing workflow scope, refresh that credential
+   with gh auth refresh -h github.com -s workflow, then retry the push.
+
+   Copy the run ID from the run list and follow it:
+
+   gh run watch RUN_ID --exit-status
+
+   Alternatively, open the repository's Actions tab, select "Publish APEX GP
+   image", choose Run workflow on main, and keep the tag ctf-v1.
+
+3. Wait for the workflow to succeed.
+
+   The workflow checks the source, runs npm tests using Node 24 on the runner,
+   builds AMD64 and ARM64 images, and publishes:
+
+   ghcr.io/ashraful-notfound/apex-gp:ctf-v1
+
+   The run summary also provides an immutable image digest. You may use that
+   digest in the Kubernetes image field to pin the exact build.
+
+4. Let the Kubernetes cluster pull the package.
+
+   GitHub initially creates a new package as private. Either have the platform
+   administrator configure private-image pull credentials for the instancer,
+   or choose to make the package public under GitHub Packages / apex-gp /
+   Package settings / Change visibility. Public packages allow anonymous pulls.
+
+   Publishing the package does not automatically configure the cluster's
+   registry credentials. No package visibility change is performed by this
+   workflow.
+
+5. Set the rCTF pod's image field:
+
+   image: ghcr.io/ashraful-notfound/apex-gp:ctf-v1
+
+   Keep command: [node, ctf-instance.mjs], container/pod name game and port
+   8080 from the supplied Kubernetes template. The permanent coordinator
+   runs on your server, separate from these temporary team pods.
+
+The workflow uses the repository's built-in GITHUB_TOKEN with packages:write.
+Do not add your rCTF webhook secret, gateway key, client secret or .env as
+GitHub Actions build secrets: this image needs none of them at build time.
+
+If using the published image on the coordinator server, authenticate there
+as required for a private package, then pull it and avoid rebuilding:
+
+   docker compose --env-file .env -f deploy/rctf/compose.yaml pull coordinator
+   docker compose --env-file .env -f deploy/rctf/compose.yaml --profile https up -d --no-build
+
+Omit --profile https if that server already has an HTTPS reverse proxy.
+
+References:
+[GitHub Container Registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
+[Package visibility](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility)

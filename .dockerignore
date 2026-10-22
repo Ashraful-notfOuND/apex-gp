@@ -1,0 +1,13 @@
+.git
+.openai
+.env
+.env.*
+data
+node_modules
+static-dist
+output
+tests
+scripts
+deploy/rctf/challenge.generated.json
+*.log
+__pycache__
