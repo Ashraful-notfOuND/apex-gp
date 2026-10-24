@@ -1,6 +1,6 @@
 # Renderer previews
 
-These fifteen images are actual 1440 × 900 offscreen EGL/GLES renders of the replacement car model and Monaco scenery, saved as WebP. All six runtime shaders compile and link; every replayed GL command is checked for errors and each saved frame is checked for nonblank output. The main framebuffer has 24-bit depth; the shadow map retains its runtime 16-bit depth attachment. Frames include mapped constructor/sponsor artwork, tyre lettering, facade atlas, materials, filtered shadows, contact shading and fencing. HTML controls, HUD and the live steering LCD are not included. Browser layout and a full human-driven lap still need play-testing on the host.
+These fifteen images are actual 1440 × 900 offscreen EGL/GLES renders of the car model and Monaco scenery, saved as WebP. All eight runtime shaders compile and link; every replayed GL command is checked for errors and each saved frame is checked for nonblank output and unexpected black regions. The scene framebuffer has packed 24-bit depth and 8-bit stencil; the shadow map retains its runtime 16-bit depth attachment. Frames include the reflective showroom floor, mapped constructor/sponsor artwork, tyre lettering, facade atlas, materials, filtered shadows, contact shading, fencing, layered sky and the final antialiasing/bloom pass. HTML controls, HUD and the live steering LCD are not included. Browser layout and a full human-driven lap still need play-testing on the host.
 
 - car-front.webp — connected bodywork, nose, front wing, suspension and driver
 - car-side.webp — sidepod livery, wheelbase and body proportions
@@ -19,6 +19,11 @@ These fifteen images are actual 1440 × 900 offscreen EGL/GLES renders of the re
 - monaco-chicane-barriers.webp — overhead check that sharp offsets no longer fold across the road
 
 The buildings, terrain and team liveries are original approximations. These renders do not establish photographic or commercial simulator fidelity.
+
+For a selected view, use `node scripts/capture-model.mjs --views=monaco-garage --width=1440`.
+Multiple comma-separated names are accepted; track views automatically include
+the track geometry. Add `--performance` to check the direct rendering path with
+the finishing pass and cast shadows disabled.
 
 To reproduce all fifteen images from the repository root:
 

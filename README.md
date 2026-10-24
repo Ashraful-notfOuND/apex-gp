@@ -69,6 +69,18 @@ The challenge gives **one DRS activation per lap**, independent of detection zon
 
 ## Graphics
 
+The showroom has a reflective tiled floor, a larger car composition, overhead
+softboxes, illuminated display-bay edges, wall graphics and workshop equipment.
+The car reflection uses mirrored model geometry under a translucent floor, and
+the studio key and fill lights remain independent of the room's ceiling.
+Outdoor rendering uses warmer directional light, cool shaded surfaces, layered
+clouds and mountains, distance haze, finer asphalt grain and rubbered-in lanes,
+glossier harbor water, and projecting cornices, balconies and varied rooftops.
+High graphics adds an edge-aware antialiasing pass, subtle highlight bloom,
+vignette and bounded dithering, at up to 2× device pixel ratio. Performance mode
+disables this finishing pass and cast shadows. These are rendering changes;
+the event physics and qualifying records retain their existing version.
+
 The car uses a replacement mesh with a connected floor/sill, capped monocoque, rolled cockpit rim, descending sidepod shoulders, small recessed radiator slots, integrated airbox, continuously swept halo, tapered suspension links, brake uprights and three closed front-wing elements. The rear wing includes a separate DRS flap, hinge pins and actuator. Driver geometry includes a shaped full-face helmet, reflective visor, HANS/headrest, harness, sleeves and gloved hands attached to the steering yoke. Its physical screen shows live gear/speed/battery data.
 
 All eleven choices have 2048-square locally authored SVG livery atlases with explicit body-panel UVs, constructor badges and sponsor marks on the body, nose and wings; three tyre maps supply compound-colored sidewall lettering. The artwork uses simplified local vector drawings and illustrative placements, rather than exact 2026 decal layouts. This is original illustrative geometry and paint, not manufacturer CAD or a precise reconstruction of eleven different chassis. Only the selected car is built initially; later selections are cached. The garage uses softbox reflection shapes and a tighter shadow projection to make the surfaces and contact shadows easier to inspect.
@@ -98,7 +110,7 @@ Review replays the recorded version/seed/controls, checks sequence/tick continui
 
 Tests cover rejected legacy fence chords at the hairpin, independent clearance checks of the actual scenery safety segments and low prop footprints, finite model geometry, normal lengths, UV bounds, assembled dimensions, local livery/tyre assets, A/D screen direction, repeated contact preserving lap validity, one-use DRS (including held keys across the line), control/physics behavior, single-lap rounds, timing gates/invalidation, replay determinism, points/ties, authentication, malicious client times, expiry, persistent best scores, three-round limits across server restarts, private-route protection, organizer tools and the UI lifecycle using DOM/WebGL stubs.
 
-During this update, all six shaders were compiled and fifteen actual 3D frames rendered with an offscreen EGL/GLES context. Visual inspection checked the redesigned car from the front, both sides, rear and top, its cockpit and open DRS, onboard visibility, sponsor mapping, shadow filtering, tunnel, waterfront and overhead views of the repaired hairpin/chicane boundaries. Reproduce the previews with `node scripts/capture-model.mjs --track` followed by `python3 scripts/render-capture.py`; native development requirements are listed in `output/previews/README.md`. A complete browser/human-driven lap still needs testing on your host: this environment blocks local listening sockets and browser startup. Offscreen rendering does not validate browser layout or human driving feel.
+The eight shaders and fifteen actual 3D views can be checked with an offscreen EGL/GLES context, including the car from the front, both sides, rear and top, its cockpit and open DRS, showroom reflection, onboard visibility, sponsor mapping, shadow filtering, tunnel, waterfront and overhead views of the hairpin/chicane boundaries. Reproduce the previews with `node scripts/capture-model.mjs --track` followed by `python3 scripts/render-capture.py`; native development requirements are listed in `output/previews/README.md`. A complete browser/human-driven lap still needs testing on your host. Offscreen rendering does not validate browser layout or human driving feel.
 
 ## Free static hosting on Render
 
@@ -162,6 +174,29 @@ curl -fsS https://YOUR-SITE.onrender.com/ | rg 'apex-hosting.*static'
 HTTP 200 is expected for the page. There is no `/api/health` or shared leaderboard on a Static Site; those checks belong to the optional Node server below. Custom domains and HTTPS are supported by Render; the supplied URL is enough to share the preview.
 
 For later changes, push to the connected branch and let Render rebuild the static site (automatic deployments are enabled in the static Blueprint). The preview has no server records to migrate. Choose Performance graphics if a player's browser needs a lower rendering resolution.
+
+### Custom domain: aanafim.xyz
+
+The static Blueprint includes `aanafim.xyz`. Render performs the build remotely;
+no game server or build needs to run on your laptop. The GitHub repository can
+remain private: grant Render's GitHub app access to this repository.
+
+If creating the site manually, use `npm run build:static` as the build command
+and `static-dist` as the publish directory, then add `aanafim.xyz` under the
+service's **Settings → Custom Domains**. If using the Blueprint, push
+`render.yaml` first and select that file when creating the Blueprint.
+
+Once the site is live at its assigned `onrender.com` address, follow the DNS
+records shown by Render for `aanafim.xyz` and its `www` alias, then select
+**Verify**. The exact apex record depends on your DNS provider; follow
+[Render's provider instructions](https://render.com/docs/configure-other-dns).
+Render issues and renews HTTPS certificates after successful verification.
+Adding the domain to this file does not change your DNS or deploy the service.
+
+This public site supports unlimited practice and three browser-local guest
+qualifying rounds. It does not enforce team-wide attempts or submit rCTF scores.
+The rCTF competition still requires the separately deployed persistent
+coordinator and team instances described in `deploy/rctf/README.md`.
 
 ## Ranked server hosting on Render
 

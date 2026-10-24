@@ -28,6 +28,6 @@ export function roadEnvelope(track,clearance,spacing=1.2){
  const triangles=[];for(const key of cells){const [x,z]=key.split(',').map(Number),p=[point(x,z),point(x+1,z),point(x+1,z+1),point(x,z+1)];if(p.every(a=>a.d>6.3))continue;triangles.push([p[0],p[1],p[2]],[p[0],p[2],p[3]]);}
  const crossing=(a,b,r)=>{const t=(r-a.d)/(b.d-a.d),p=a.p.map((v,i)=>v+(b.p[i]-v)*t),n=clearance.nearest(...p),dx=p[0]-n.x,dz=p[1]-n.z,l=Math.hypot(dx,dz)||1;return {p,d:r,n,nx:dx/l,nz:dz/l};};
  const contours=r=>{const segments=[];for(const tri of triangles){const hit=[];for(let i=0;i<3;i++){const a=tri[i],b=tri[(i+1)%3];if((a.d<r)!==(b.d<r))hit.push(crossing(a,b,r));}if(hit.length===2&&Math.hypot(hit[0].p[0]-hit[1].p[0],hit[0].p[1]-hit[1].p[1])>.001)segments.push(hit);}return segments;};
- const fill=(builder,r,color)=>{for(const tri of triangles){const polygon=[];for(let i=0;i<3;i++){const a=tri[i],b=tri[(i+1)%3];if(a.d<r)polygon.push(a);if((a.d<r)!==(b.d<r))polygon.push(crossing(a,b,r));}for(let i=1;i<polygon.length-1;i++)builder.triangle(...[polygon[0],polygon[i],polygon[i+1]].map(a=>[a.p[0],a.n.y,a.p[1]]),color,[0,1,0]);}};
+ const fill=(builder,r,color)=>{for(const tri of triangles){const polygon=[];for(let i=0;i<3;i++){const a=tri[i],b=tri[(i+1)%3];if(a.d<r)polygon.push(a);if((a.d<r)!==(b.d<r))polygon.push(crossing(a,b,r));}for(let i=1;i<polygon.length-1;i++)for(const a of [polygon[0],polygon[i],polygon[i+1]])builder.vertex([a.p[0],a.n.y,a.p[1]],[0,1,0],color,[a.n.s,a.d]);}};
  return {contours,fill};
 }

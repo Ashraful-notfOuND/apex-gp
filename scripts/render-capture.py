@@ -51,6 +51,9 @@ for index,cmd in enumerate(payload['commands']):
    program=resource(args[0]);G.glLinkProgram(program);ok=I();G.glGetProgramiv(program,0x8B82,C.byref(ok));log=C.create_string_buffer(4096);G.glGetProgramInfoLog(program,4096,None,log);assert ok.value,log.value
   elif name=='bufferData':
    data=raw(args[1]);buf=C.create_string_buffer(data);G.glBufferData(resource(args[0]),len(data),buf,resource(args[2]))
+  elif name=='renderbufferStorage' and args[1]==0x84f9:
+   # WebGL DEPTH_STENCIL is backed by GLES DEPTH24_STENCIL8.
+   G.glRenderbufferStorage(resource(args[0]),0x88f0,args[2],args[3])
   elif name=='pixelStorei'and args[0]==0x9240:flip=bool(args[1])
   elif name=='texImage2D':
    if len(args)==6:
@@ -62,7 +65,11 @@ for index,cmd in enumerate(payload['commands']):
   elif name=='uniform3fv':
    data=(F*len(args[1]))(*args[1])if isinstance(args[1],list)else C.cast(C.create_string_buffer(raw(args[1])),C.POINTER(F));G.glUniform3fv(resource(args[0]),1,data)
   elif name=='screenshot':
-   G.glFinish();buf=C.create_string_buffer(width*height*4);G.glReadPixels(0,0,width,height,0x1908,0x1401,buf);im=Image.frombytes('RGBA',(width,height),buf.raw).transpose(Image.Transpose.FLIP_TOP_BOTTOM).convert('RGB');assert min(ImageStat.Stat(im).stddev)>10,'Blank frame';im.save(args[0],quality=93,method=6);frames+=1;print(args[0],flush=True)
+   G.glFinish();buf=C.create_string_buffer(width*height*4);G.glReadPixels(0,0,width,height,0x1908,0x1401,buf);im=Image.frombytes('RGBA',(width,height),buf.raw).transpose(Image.Transpose.FLIP_TOP_BOTTOM).convert('RGB');assert min(ImageStat.Stat(im).stddev)>10,'Blank frame'
+   # Catch undefined shader output, including desktop-size postprocess NaNs
+   # that leave a large black wedge while the rest of the frame looks valid.
+   dark=sum(im.convert('L').histogram()[:2]);assert dark/(width*height)<.02,'Unexpected black region in rendered frame'
+   im.save(args[0],quality=93,method=6);frames+=1;print(args[0],flush=True)
   else:getattr(G,'gl'+name[0].upper()+name[1:])(*[resource(x)for x in args])
   error=G.glGetError();assert error==0,'GL error '+hex(error)
  except Exception:

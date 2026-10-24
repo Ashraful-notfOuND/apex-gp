@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="2048" height="1024" viewBox="0 0 2048 1024">
+ <rect width="2048" height="1024" fill="#202832"/>
+ <path d="M118 302 273 114h91L209 302Zm193 0 104-140 104 140h-94l-27-45-31 45Z" fill="#ff572b"/>
+ <text x="116" y="595" font-family="DejaVu Sans,Arial,sans-serif" font-weight="bold" font-size="300" font-style="italic" letter-spacing="-20" fill="#f2f1eb">APEX <tspan fill="#ff572b">GP</tspan></text>
+ <path d="M128 682H1900" stroke="#627081" stroke-width="2"/>
+ <text x="130" y="787" font-family="DejaVu Sans,Arial,sans-serif" font-size="49" letter-spacing="13" fill="#b6c2cf">MONACO / QUALIFYING</text>
+ <text x="130" y="903" font-family="DejaVu Sans,Arial,sans-serif" font-size="29" letter-spacing="7" fill="#758497">PRECISION AT THE LIMIT.</text>
+ <path d="M1790 148h110v36h-110Z" fill="#e83c47"/><path d="M1790 184h110v36h-110Z" fill="#eeeae2"/>
+</svg>

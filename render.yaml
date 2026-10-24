@@ -3,6 +3,8 @@ services:
   - type: web
     name: apex-gp-preview
     runtime: static
+    domains:
+      - aanafim.xyz
     buildCommand: npm run build:static
     staticPublishPath: static-dist
     autoDeployTrigger: commit

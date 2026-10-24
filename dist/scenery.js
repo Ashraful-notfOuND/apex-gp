@@ -55,10 +55,21 @@ export function buildMonacoScene(track,renderer){
   wall([-w/2,0,d/2],[-w/2,0,-d/2],[-w/2,h,-d/2],[-w/2,h,d/2],d);
   wall([w/2,0,-d/2],[w/2,0,d/2],[w/2,h,d/2],[w/2,h,-d/2],d);
   trim.box(0,h,0,w,.25,d,[.69,.67,.61]);trim.box(0,.24,0,w+.5,.48,d+.5,[.52,.50,.45]);
+  // Corner stonework and projecting cornices break up the flat facade cards.
+  for(const xx of [-1,1])for(const zz of [-1,1])trim.box(xx*(w/2-.13),h*.5,zz*(d/2-.13),.46,h,.46,[.76,.73,.66]);
+  for(const yy of [3.3,h-1.0])trim.box(0,yy,0,w+.55,.23,d+.55,[.79,.75,.66]);
+  if(style===1){
+   const roof=new Builder(0),terracotta=[.43,.25,.18];
+   roof.quad([-w/2,h+.85,-d/2],[w/2,h+.85,-d/2],[w/2,h+3.4,0],[-w/2,h+3.4,0],terracotta);
+   roof.quad([w/2,h+.85,d/2],[-w/2,h+.85,d/2],[-w/2,h+3.4,0],[w/2,h+3.4,0],terracotta);
+   for(const xx of [-w/2,w/2])roof.triangle([xx,h+.85,-d/2],[xx,h+.85,d/2],[xx,h+3.4,0],[.70,.62,.49]);
+   props.transformed(roof,frame);
+  }
   if(style<2){trim.box(0,h+.18,0,w+1,.4,d+1,[.82,.79,.71]);trim.box(0,h+.63,0,w+.45,.5,d+.45,[.73,.70,.62]);const roof=new Builder(0);roof.prism([[-w/2,-d/2],[w/2,-d/2],[w/2,d/2],[-w/2,d/2]],h+.9,.25,[.47,.30,.23]);props.transformed(roof,frame);for(const xx of [-w*.3,w*.27])trim.box(xx,h+1.4,0,1.1,1.8,1,[.67,.59,.46]);}
   else{for(const side of [-1,1]){trim.box(0,h+.60,side*d/2,w,.85,.15,[.78,.77,.72]);trim.box(side*w/2,h+.60,0,.15,.85,d,[.78,.77,.72]);}trim.box(w*.2,h+.7,0,w*.36,1.3,d*.45,[.65,.65,.60]);for(let k=0;k<3;k++){trim.box(-w*.23+k*1.5,h+.48,d*.2,1,.7,1.4,[.56,.58,.57]);iron.rod([-w*.23+k*1.5,h+.85,d*.2],[-w*.23+k*1.5,h+.87,d*.2],.35,[.28,.31,.30],12);}}
   for(let floor=3.5;floor<h-.6;floor+=3.5){
    if(style<2)trim.box(0,floor-.08,0,w+.23,.12,d+.23,[.80,.78,.72]);
+   if(style===3){trim.box(0,floor-.15,0,w+.70,.20,d+.70,[.75,.73,.66]);for(const side of [-1,1]){iron.surface=8;iron.box(0,floor+.38,side*(d/2+.28),w-.5,.80,.035,[.24,.33,.37]);iron.surface=10;iron.box(0,floor+.82,side*(d/2+.28),w,.025,.035,[.49,.53,.55]);}}
    if(n.distance<67)for(let col=-w/2+1.5;col<w/2-1;col+=3){for(const side of [-1,1]){const zz=side*(d/2+.42),balcony=style===2||((Math.round(col*2)+Math.round(floor))%3===0);if(!balcony)continue;
     trim.box(col,floor-.10,zz,2.5,.17,.9,[.75,.73,.67]);for(const x0 of [-1.15,0,1.15])iron.rod([col+x0,floor,zz+side*.40],[col+x0,floor+.89,zz+side*.40],.012,[.15,.18,.17],5);iron.rod([col-1.15,floor+.9,zz+side*.4],[col+1.15,floor+.9,zz+side*.4],.014,[.20,.22,.21],6);
     if(style===2){iron.surface=8;iron.box(col,floor+.43,zz+side*.39,2.3,.78,.025,[.16,.24,.25]);iron.surface=10;}
