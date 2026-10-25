@@ -10,7 +10,7 @@ export function buildStaticSite(destination=join(root,'static-dist')){
  if(!input.includes(marker))throw new Error('Missing hosting marker; refusing to build a preview with ranked controls enabled.');
  rmSync(output,{recursive:true,force:true});mkdirSync(output,{recursive:true});let count=0;
  for(const file of readdirSync(source,{recursive:true})){
-  const name=file.replaceAll('\\','/');if(!publicFile.test(name))continue;
+  const name=file.replaceAll('\\','/');if(!publicFile.test(name)||name.startsWith('leaderboard.'))continue;
   if(!lstatSync(join(source,file)).isFile())throw new Error('Public assets must be regular files: '+name);
   const target=join(output,file);mkdirSync(dirname(target),{recursive:true});copyFileSync(join(source,file),target);count++;
  }

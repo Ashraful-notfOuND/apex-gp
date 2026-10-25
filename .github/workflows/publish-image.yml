@@ -6,7 +6,7 @@ on:
       tag:
         description: Container image tag
         required: true
-        default: ctf-v1
+        default: ctf-v2
         type: string
 
 permissions:

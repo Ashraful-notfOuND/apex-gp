@@ -1,10 +1,10 @@
 # APEX GP — Monaco Qualifying
 
-A desktop browser racing challenge: choose a car, choose tyres and Go. Eleven constructors, manual gears, no driving assists, three qualifying rounds and one retained best time. The landing page shows no car ratings, capabilities or performance bars.
+A desktop browser racing challenge: choose a car, choose tyres and Go. Eleven constructors, manual gears and no driving assists. In rCTF competition mode, each instance grants one race and every team retains its fastest valid lap across instances. The landing page shows no car ratings, capabilities or performance bars.
 
 ## Run
 
-For an **rCTF challenge with per-team HTTP instances, unlimited practice, three qualifying rounds and automatic lap-based CTF points**, use the [rCTF deployment guide](deploy/rctf/README.md). It includes the shared persistent coordinator, rCTF sign-in, Docker instance configuration and dynamic-score publisher. The static preview below does not supply event scoring.
+For an **rCTF challenge with per-team HTTP instances, one race per instance, automatic shutdown and lap-based CTF points**, use the [rCTF deployment guide](deploy/rctf/README.md). It includes the shared persistent coordinator, central leaderboard, rCTF sign-in, Kubernetes instance configuration, shutdown worker and dynamic-score publisher. Practice is hidden in competition instances. The standalone and static-preview instructions below describe browser-local play rather than the competition lifecycle. The static preview below does not supply event scoring.
 
 Requires a keyboard/WebGL browser. Use Node.js 24 for deployment (`.node-version` pins the major version); the code also runs on Node.js 20+. There are no npm dependencies.
 
@@ -17,15 +17,15 @@ Open **http://localhost:5174**. The default **Guest qualifying** mode gives this
 
 **Driver** settings contain optional unlimited practice, ranked qualifying and the graphics setting. **Timing** opens the event leaderboard. Both stay outside the main car/tyre/Go flow.
 
-## Three-round format
+## Standalone three-round format
 
 Each qualifying round consists of the short out-lap from 120 m before the timing line and **exactly one flying lap**. Crossing the line ends that round automatically. Up to ten minutes are allowed to finish. The fastest valid lap across the three rounds is retained; there is no fourth attempt.
 
 Starting a round consumes one attempt. Invalid laps, an abandoned/replaced session, lost live timing or a server restart do not refund it. The interface shows Q1/Q2/Q3 and the result of each used round. Earlier valid times remain available after a slower or invalid round. Local guest progress is browser-specific; authenticated event progress is enforced on the server.
 
-Twelve sequential timing gates validate the 3.337 km circuit, with three sectors. **Wall bumps never invalidate a lap or retire the car.** Impacts still shed speed and deflect the car; running over the painted edge reduces grip. There is no accumulating collision damage. Missing timing gates or recovering the car still invalidates the lap. Qualifying ends on pause, hiding the tab or losing window focus. Unlimited practice can be paused and does not use any of the three qualifying attempts. Recovery is available only in practice, with a five-second hold.
+Twelve sequential timing gates validate the 3.337 km circuit, with three sectors. **A crash immediately invalidates and ends a qualifying race, including on the out-lap.** Impacts still shed speed and deflect the car; running over the painted edge reduces grip. There is no accumulating collision damage. Missing timing gates or recovering the car still invalidates the lap. Qualifying ends on pause, hiding the tab or losing window focus. Unlimited practice can be paused and does not use any of the three qualifying attempts. Recovery is available only in practice, with a five-second hold.
 
-## Ranked event entry
+## Standalone ranked event entry
 
 Create one entry/token for each competing player. A CTF team can designate the player who uses its token; sharing a token also shares its three-round allowance.
 
@@ -79,15 +79,15 @@ glossier harbor water, and projecting cornices, balconies and varied rooftops.
 High graphics adds an edge-aware antialiasing pass, subtle highlight bloom,
 vignette and bounded dithering, at up to 2× device pixel ratio. Performance mode
 disables this finishing pass and cast shadows. These are rendering changes;
-the event physics and qualifying records retain their existing version.
+competition rule changes are versioned separately from these visual assets.
 
 The car uses a replacement mesh with a connected floor/sill, capped monocoque, rolled cockpit rim, descending sidepod shoulders, small recessed radiator slots, integrated airbox, continuously swept halo, tapered suspension links, brake uprights and three closed front-wing elements. The rear wing includes a separate DRS flap, hinge pins and actuator. Driver geometry includes a shaped full-face helmet, reflective visor, HANS/headrest, harness, sleeves and gloved hands attached to the steering yoke. Its physical screen shows live gear/speed/battery data.
 
 All eleven choices have 2048-square locally authored SVG livery atlases with explicit body-panel UVs, constructor badges and sponsor marks on the body, nose and wings; three tyre maps supply compound-colored sidewall lettering. The artwork uses simplified local vector drawings and illustrative placements, rather than exact 2026 decal layouts. This is original illustrative geometry and paint, not manufacturer CAD or a precise reconstruction of eleven different chassis. Only the selected car is built initially; later selections are cached. The garage uses softbox reflection shapes and a tighter shadow projection to make the surfaces and contact shadows easier to inspect.
 
-The same runtime geometry is supplied as `output/models/apex-formula-2026.glb` (17 named nodes, indexed meshes, embedded default Ferrari-style paint and soft-tyre textures). Edit the authoring surfaces in `dist/model-surfaces.js` and `dist/car-model.js`. `npm run model:liveries` rebuilds the 11 SVG car atlases and 3 tyre maps; `npm run model:export` rebuilds the GLB using the included PNG export textures. See `output/models/README.md` for the texture workflow. This visual update keeps the v3 simulation and existing round allowances.
+The same runtime geometry is supplied as `output/models/apex-formula-2026.glb` (17 named nodes, indexed meshes, embedded default Ferrari-style paint and soft-tyre textures). Edit the authoring surfaces in `dist/model-surfaces.js` and `dist/car-model.js`. `npm run model:liveries` rebuilds the 11 SVG car atlases and 3 tyre maps; `npm run model:export` rebuilds the GLB using the included PNG export textures. See `output/models/README.md` for the texture workflow. The model assets are independent of the v4 competition rules.
 
-The renderer uses per-surface roughness and metalness, Fresnel reflections, a clear-coat response, filmic tone mapping, a stabilized 2048² directional shadow map with fractional tent filtering, a tighter depth range, fading borders and soft contact shading beneath the tyres and floor, plus textured asphalt, concrete, carbon and a generated four-style facade atlas. Facades use local UV coordinates that survive scenery batching. The model sampler supplies mapped paint, tyre sidewalls and matte circuit sign artwork. `npm run scene:art` rebuilds the sixteen local vector sign panels. Monaco flags, storefront plaques, sponsor boards, sector/wayfinding signs and feathered palm fronds add circuit detail. Back-facing surfaces are shaded correctly, so palms and bodywork no longer wash out white. Monaco scenery includes corrugated Armco, antialiased catch fencing with distance fading, pit garages, balconies, roof terraces, rooftop equipment, shop awnings, planted beds, drain covers, street lamps, palms, marshals, crowds/grandstands, tunnel lighting, yachts and animated water. The basin follows the coastal section with a close stone quay instead of a distant rectangular water patch. The tunnel has a solid wall and enclosed ceiling. The visible road, edge lines, kerbs, Armco and fences follow the boundary of the union of road-width capsules, so sharp turns cannot fold offsets across the road. Every safety segment and low sign/tunnel-wall footprint is checked against all nearby circuit branches. These are visual changes; timing, collision rules and existing round allowances retain the v3 simulation. Scenery is batched into spatial cells for visibility and shadow culling. The race HUD is compact and leaves the road visible.
+The renderer uses per-surface roughness and metalness, Fresnel reflections, a clear-coat response, filmic tone mapping, a stabilized 2048² directional shadow map with fractional tent filtering, a tighter depth range, fading borders and soft contact shading beneath the tyres and floor, plus textured asphalt, concrete, carbon and a generated four-style facade atlas. Facades use local UV coordinates that survive scenery batching. The model sampler supplies mapped paint, tyre sidewalls and matte circuit sign artwork. `npm run scene:art` rebuilds the sixteen local vector sign panels. Monaco flags, storefront plaques, sponsor boards, sector/wayfinding signs and feathered palm fronds add circuit detail. Back-facing surfaces are shaded correctly, so palms and bodywork no longer wash out white. Monaco scenery includes corrugated Armco, antialiased catch fencing with distance fading, pit garages, balconies, roof terraces, rooftop equipment, shop awnings, planted beds, drain covers, street lamps, palms, marshals, crowds/grandstands, tunnel lighting, yachts and animated water. The basin follows the coastal section with a close stone quay instead of a distant rectangular water patch. The tunnel has a solid wall and enclosed ceiling. The visible road, edge lines, kerbs, Armco and fences follow the boundary of the union of road-width capsules, so sharp turns cannot fold offsets across the road. Every safety segment and low sign/tunnel-wall footprint is checked against all nearby circuit branches. The scenery is visual; the v4 competition rules are enforced by the session and coordinator. Scenery is batched into spatial cells for visibility and shadow culling. The race HUD is compact and leaves the road visible.
 
 This remains a simplified real-time browser scene. Buildings/elevation are not surveyed Monaco assets, team cars share an original base model, reflections are approximate, and it does not achieve full photographic or commercial simulator fidelity. There are no remote runtime assets or fonts. Driver → Graphics → Performance disables cast shadows and lowers rendering resolution for slower hardware.
 
@@ -106,15 +106,15 @@ npm run check
 npm test
 ```
 
-Review replays the recorded version/seed/controls, checks sequence/tick continuity and reports laps, input hashes and control-change rates as evidence. Scores exports best-per-entry JSON for an organizer's CTF scoreboard adapter. No external CTF integration or flag distribution is included.
+Review replays the recorded version/seed/controls, checks sequence/tick continuity and reports laps, input hashes and control-change rates as evidence. Scores exports best-per-entry JSON for an organizer's CTF scoreboard adapter. The rCTF coordinator publishes dynamic points automatically; no flag submission is required.
 
-Tests cover rejected legacy fence chords at the hairpin, independent clearance checks of the actual scenery safety segments and low prop footprints, finite model geometry, normal lengths, UV bounds, assembled dimensions, local livery/tyre assets, A/D screen direction, repeated contact preserving lap validity, one-use DRS (including held keys across the line), control/physics behavior, single-lap rounds, timing gates/invalidation, replay determinism, points/ties, authentication, malicious client times, expiry, persistent best scores, three-round limits across server restarts, private-route protection, organizer tools and the UI lifecycle using DOM/WebGL stubs.
+Tests cover rejected legacy fence chords at the hairpin, independent clearance checks of the actual scenery safety segments and low prop footprints, finite model geometry, normal lengths, UV bounds, assembled dimensions, local livery/tyre assets, A/D screen direction, crash invalidation and immediate race termination, one-use DRS (including held keys across the line), control/physics behavior, single-lap rounds, timing gates/invalidation, replay determinism, points/ties, authentication, malicious client times, expiry, persistent best scores, one-race instance quotas and shutdown recovery, standalone three-round limits across server restarts, private-route protection, organizer tools and the UI lifecycle using DOM/WebGL stubs.
 
 The eight shaders and fifteen actual 3D views can be checked with an offscreen EGL/GLES context, including the car from the front, both sides, rear and top, its cockpit and open DRS, showroom reflection, onboard visibility, sponsor mapping, shadow filtering, tunnel, waterfront and overhead views of the hairpin/chicane boundaries. Reproduce the previews with `node scripts/capture-model.mjs --track` followed by `python3 scripts/render-capture.py`; native development requirements are listed in `output/previews/README.md`. A complete browser/human-driven lap still needs testing on your host. Offscreen rendering does not validate browser layout or human driving feel.
 
 ## Free static hosting on Render
 
-The current deployment target is a free **Static Site**. It includes all eleven cars, tyre choices, manual driving, DRS, graphics/audio, three guest qualifying rounds with the best time saved on that browser, and unlimited practice. It hides ranked event selection, token entry, shared timing and the ranked briefing, and does not request any `/api` endpoints. Browser-local records are unverified and do not produce a shared CTF classification.
+The separate public preview uses a free **Static Site**. It includes all eleven cars, tyre choices, manual driving, DRS, graphics/audio, three guest qualifying rounds with the best time saved on that browser, and unlimited practice. It hides ranked event selection, token entry, shared timing and the ranked briefing, and does not request any `/api` endpoints. Browser-local records are unverified and do not produce a shared CTF classification.
 
 The default `render.yaml` now describes only this static site. The paid Node service configuration is preserved separately in `render-ranked.yaml`. No server, disk, `HOST`, `PORT`, `DATA_DIR` or player-token provisioning is required for the static preview. Render static sites are free to deploy within their included usage limits. [Render Static Sites](https://render.com/docs/static-sites).
 
@@ -278,7 +278,7 @@ curl -I https://YOUR-SERVICE.onrender.com/
 curl -fsS https://YOUR-SERVICE.onrender.com/api/leaderboard
 ```
 
-The health endpoint should return JSON with `ok: true`, `version: "monaco-2026-v3"` and `event: "monaco-2026"`. The page should return HTTP 200; an unused event board has an empty `entries` array.
+The health endpoint should return JSON with `ok: true`, `version: "monaco-2026-v4"` and `event: "monaco-2026"`. The page should return HTTP 200; an unused event board has an empty `entries` array.
 
 Open the public address in a desktop browser. Select practice in **Driver** settings and drive it first: check car selection, tyres, W/S, A/D, manual shifts, the once-per-lap DRS, cameras and audio. Graphics run on each player's computer. If needed, choose **Driver → Graphics → Performance**. Keep the public browser window focused during ranked rounds.
 

@@ -23,9 +23,14 @@ test('A and D are swapped at the keyboard and move left/right in the driving cam
  for(let i=0;i<100;i++){a.step(1/HZ,{throttle:true,[DRIVING_KEYS.KeyA]:true});d.step(1/HZ,{throttle:true,[DRIVING_KEYS.KeyD]:true});}
  assert.ok(screenX(a)<0);assert.ok(screenX(d)>0);assert.equal(DRIVING_KEYS.KeyW,'throttle');assert.equal(DRIVING_KEYS.KeyS,'brake');
 });
-test('repeated wall bumps and painted-edge excursions preserve a complete timed lap',()=>{
- for(const kind of ['bump','edge']){const q=timingHarness();q.singleLap=true;q.player.step=()=>{q.player.progress+=10;q.player.lastImpact=kind==='bump'?.45:0;q.player.offTrack=kind==='edge';};while(!q.finished)q.step(0);assert.equal(q.laps[0].valid,true,kind);assert.ok(q.best>0);assert.equal(q.laps[0].reason,'');assert.equal(q.player.damage,0);assert.ok(!q.events.some(e=>e.type==='invalid'));}
- const q=timingHarness();q.lapStart=0;q.player.progress=50;q.resetCar();q.step(0);assert.equal(q.valid,false);assert.equal(q.invalidReason,'Car reset');
+test('crashes invalidate and finish a race immediately on both the out-lap and flying lap',()=>{
+ for(const flying of [false,true])for(const impact of [.008,.45]){
+  const q=timingHarness();q.singleLap=true;if(flying){while(q.lapStart===null)q.step(0);}
+  q.player.step=()=>{q.player.progress+=10;q.player.lastImpact=impact;};q.step(0);
+  assert.equal(q.valid,false);assert.equal(q.finished,true);assert.equal(q.best,Infinity);assert.equal(q.laps.length,0);assert.equal(q.invalidReason,'Crash');
+  const ticks=q.ticks;for(let i=0;i<100;i++)q.step(1);assert.equal(q.ticks,ticks);assert.equal(q.events.filter(e=>e.type==='finish').length,1);
+ }
+ const q=timingHarness();q.singleLap=true;q.player.step=()=>{q.player.progress+=10;q.player.offTrack=true;};while(!q.finished)q.step(0);assert.equal(q.laps[0].valid,true);
 });
 test('wall collisions still lose momentum but cannot accumulate damage or retire the car',()=>{
  const c=new Car(straight());for(let i=0;i<150;i++){c.x=4.7;c.vx=25;c.vz=30;c.collisionCooldown=0;c.step(1/HZ,{});assert.ok(c.x<=4.43);assert.ok(c.vx<25);assert.equal(c.damage,0);}assert.ok(c.lastImpact>0);
@@ -43,7 +48,16 @@ test('an interlocked DRS request does not spend the allowance until the flap ope
 test('the same inputs replay deterministically despite client event consumption',()=>{const a=new Qualifying(track,{seed:99}),b=new Qualifying(track,{seed:99});for(let i=0;i<800;i++){const mask=i<500?1:2;a.step(mask);a.drainEvents();b.step(mask);}assert.deepEqual(a.summary(),b.summary());assert.equal(a.player.x,b.player.x);assert.equal(a.player.heading,b.player.heading);assert.equal(a.drsUsed,b.drsUsed);});
 test('input codec preserves all pedals, steering, DRS, ERS and shift edges',()=>{for(let mask=0;mask<256;mask++)assert.equal(encodeInput(decodeInput(mask)),mask);});
 test('points span 1000 to 200, ties are equal, single finisher gets 1000',()=>{const board=scoreEntries([{team:'C',time:90},{team:'A',time:70},{team:'B',time:80}]);assert.deepEqual(board.map(e=>e.points),[1000,600,200]);assert.deepEqual(board.map(e=>e.rank),[1,2,3]);assert.equal(scoreEntries([{team:'A',time:70}])[0].points,1000);assert.deepEqual(scoreEntries([{team:'A',time:70},{team:'B',time:70},{team:'C',time:90}]).map(e=>e.points),[1000,1000,200]);assert.deepEqual(scoreEntries([{team:'A',time:70},{team:'B',time:70}]).map(e=>e.points),[1000,1000]);assert.deepEqual(scoreEntries([]),[]);});
-test('one qualifying round ends after exactly one flying lap, whether valid or invalid',()=>{for(const valid of [true,false]){const q=timingHarness();q.singleLap=true;while(q.lapStart===null)q.step(0);if(!valid)q.invalidate('Contact');while(!q.finished)q.step(0);assert.equal(q.laps.length,1);assert.equal(q.laps[0].valid,valid);const time=q.time;for(let i=0;i<100;i++)q.step(1);assert.equal(q.laps.length,1);assert.equal(q.time,time);}});
+test('a valid race records exactly one flying lap; invalidation terminates without a result',()=>{
+ const q=timingHarness();q.singleLap=true;while(!q.finished)q.step(0);assert.equal(q.laps.length,1);assert.equal(q.laps[0].valid,true);
+ const bad=timingHarness();bad.singleLap=true;while(bad.lapStart===null)bad.step(0);bad.invalidate('Contact');assert.equal(bad.finished,true);assert.equal(bad.laps.length,0);assert.equal(bad.best,Infinity);
+});
+
+test('unclassified teams have JSON-safe infinite times and zero points below valid finishers',()=>{
+ const board=scoreEntries([{team:'Waiting',time:Infinity},{team:'A',time:70},{team:'New',time:null},{team:'B',time:90}]);
+ assert.deepEqual(board.map(e=>[e.team,e.time,e.points,e.rank]),[['A',70,1000,1],['B',90,200,2],['New',null,0,null],['Waiting',null,0,null]]);
+ assert.ok(!JSON.stringify(board).includes('Infinity'));
+});
 
 test('practice recovery cannot replenish a spent DRS activation',()=>{const q=new Qualifying(straight());q.step(16);q.resetCar();q.step(0);q.step(16);assert.equal(q.player.drs,false);assert.equal(q.drsUsed,true);assert.equal(q.valid,false);});
 

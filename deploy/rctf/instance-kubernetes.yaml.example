@@ -15,7 +15,7 @@ pods:
           type: RuntimeDefault
       containers:
         - name: game
-          image: ghcr.io/ashraful-notfound/apex-gp:ctf-v1
+          image: ghcr.io/ashraful-notfound/apex-gp:ctf-v2
           imagePullPolicy: Always
           workingDir: /app
           command:
@@ -41,6 +41,10 @@ pods:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.annotations['rctf.osec.io/exposed-hostnames']
+            - name: RCTF_INSTANCE_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
           resources:
             requests:
               cpu: 100m
